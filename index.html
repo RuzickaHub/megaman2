@@ -11,26 +11,82 @@
     <link id="hljs-dark" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/styles/dracula.min.css" disabled>
     
     <style>
-        /* --- OPTIMALIZACE: Plynulé přechody pro Dark Mode --- */
-        :root{--bg:#f8f9fa;--fg:#212529;--bg-card:#fff;--border:#dee2e6;--hover:#f8f9fa;--select:#e3f2fd;--primary:#0d6efd;--spinner:var(--primary);--toggle:#6c757d;}
+        /* ======================================================= */
+        /* --- ZÁKLADNÍ CSS PROMĚNNÉ (Definuje Classic Light) --- */
+        /* ======================================================= */
+        :root{
+            /* Light Mode */
+            --bg:#f8f9fa;--fg:#212529;--bg-card:#fff;--border:#dee2e6;--hover:#f8f9fa;--select:#e3f2fd;--primary:#0d6efd;--spinner:var(--primary);--toggle:#6c757d;
+            /* Fonty a Rozměry */
+            --font-family: system-ui, sans-serif;
+            --sidebar-width: 280px;
+        }
+
+        /* --- Dark Mode (Přepíná pouze základní barvy) --- */
         body.dark{--bg:#0a0a0a;--fg:#f8f9f9;--bg-card:#161616;--border:#333;--hover:#1f1f1f;--select:#1e40af;--primary:#3b82f6;--spinner:var(--primary);--toggle:#adb5bd;}
+        
+        /* ======================================================= */
+        /* --- STYLE PRO TÉMATA (Přepisují --primary a --font) --- */
+        /* ======================================================= */
+        
+        /* --- 1. Modern (Jasnější modrá, širší, zaoblená) --- */
+        body.theme-Modern{
+            --primary: #1d4ed8; 
+            --select: #bfdbfe;
+            --border: #dbeafe;
+        }
+
+        /* --- 2. Terminal (Monospace font, zelené akcenty) --- */
+        body.theme-Terminal{
+            --font-family: monospace;
+            --primary: #10b981; 
+            --select: #d1fae5;
+            --bg-card: #1f2937;
+            --fg: #f3f4f6;
+            --bg: #030712;
+            --border: #4b5563;
+        }
+
+        /* --- 3. Corporate (Serif font, decentní fialová) --- */
+        body.theme-Corporate{
+            --font-family: Georgia, serif;
+            --primary: #9333ea; 
+            --select: #ede9fe;
+        }
+
+        /* --- 4. Retro (Žlutá, kontrastní) --- */
+        body.theme-Retro{
+            --primary: #f59e0b;
+            --select: #fef3c7;
+            --fg: #374151;
+            --bg: #fefce8;
+            --bg-card: #fff;
+        }
+
+        /* --- 5. Classic (Původní nastavení) --- */
+        /* Nejsou potřeba žádná pravidla, používá se výchozí :root */
+
+
+        /* ======================================================= */
+        /* --- ZÁKLADNÍ STRUKTURA --- */
+        /* ======================================================= */
         *{margin:0;padding:0;box-sizing:border-box;}
         body{
-            font-family:system-ui,sans-serif;background:var(--bg);color:var(--fg);height:100vh;overflow:hidden;display:flex;flex-direction:column;
-            transition: background-color 0.3s, color 0.3s; /* Plynulý přechod */
+            font-family:var(--font-family);background:var(--bg);color:var(--fg);height:100vh;overflow:hidden;display:flex;flex-direction:column;
+            transition: background-color 0.3s, color 0.3s; 
         }
         .topbar, .sidebar, .content {
-             transition: background-color 0.3s, border-color 0.3s; /* Plynulý přechod */
+             transition: background-color 0.3s, border-color 0.3s; 
         }
         .topbar{display:flex;align-items:center;padding:0 1rem;height:60px;background:var(--bg-card);border-bottom:1px solid var(--border);flex:none;z-index:10;}
         #menu-btn{display:none;background:none;border:none;font-size:1.5rem;cursor:pointer;padding:.5rem;color:var(--fg);}
         #site-title{margin:0 1rem;font-size:1.2rem;flex:1;}
-        .topbar-right{display:flex;align-items:center;gap:.5rem;}
-        #search{padding:.5rem .75rem;border:1px solid var(--border);border-radius:.375rem;background:var(--bg-card);color:var(--fg);}
+        .topbar-right{display:flex;align-items:center;gap:.75rem;} 
+        #search, #theme-select{padding:.5rem .75rem;border:1px solid var(--border);border-radius:.375rem;background:var(--bg-card);color:var(--fg); appearance: none;}
         #theme-toggle{border:none;background:none;font-size:1.25rem;cursor:pointer;padding:.5rem;border-radius:.25rem;transition:.2s;}
         #theme-toggle:hover{background:var(--hover);}
         .main{flex:1;display:flex;overflow:hidden;position:relative;}
-        .sidebar{width:280px;background:var(--bg-card);border-right:1px solid var(--border);overflow:auto;position:relative;}
+        .sidebar{width:var(--sidebar-width);background:var(--bg-card);border-right:1px solid var(--border);overflow:auto;position:relative;}
         #fileTree{list-style:none;}
         .tree-item{cursor:pointer;user-select:none;display:flex;align-items:center;padding:.5rem 1rem;transition:.2s;}
         .tree-item:hover{background:var(--hover);}
@@ -53,6 +109,13 @@
         <button id="menu-btn">Menu</button>
         <h1 id="site-title">{SITE_NAME}</h1>
         <div class="topbar-right">
+            <select id="theme-select">
+                <option value="Classic">Classic</option>
+                <option value="Modern">Modern</option>
+                <option value="Terminal">Terminal</option>
+                <option value="Corporate">Corporate</option>
+                <option value="Retro">Retro</option>
+            </select>
             <input type="text" id="search" placeholder="Vyhledat...">
             <button id="theme-toggle">Moon</button>
         </div>
@@ -77,7 +140,9 @@
         const BRANCH = localStorage.getItem('BRANCH');
         const ROOT_PATH = localStorage.getItem('ROOT_PATH') || '';
         const SITE_NAME = localStorage.getItem('SITE_NAME');
-        const DEFAULT_FILE = 'README.md';
+        // --- GARANCE INSTALACE ---
+        const DEFAULT_FILE = 'INSTALL.md'; // Nový výchozí soubor
+        // -------------------------
 
         if (!OWNER || !REPO || !BRANCH) {
             document.body.innerHTML = '<div style="text-align: center; padding: 50px;"><h1>Nastavení Chybí</h1><p>Prosím, nejprve nastavte konfiguraci. Budete přesměrováni...</p></div>';
@@ -95,14 +160,50 @@
         let tree = [];
         
         // ===================================
+        // === LOGIKA TÉMAT A DARK MODE ===
+        
+        let isDark = localStorage.getItem('dark_mode') === 'dark' || (!localStorage.getItem('dark_mode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        let currentTheme = localStorage.getItem('theme_style') || 'Classic';
+
+        const lightLink = document.getElementById('hljs-light');
+        const darkLink = document.getElementById('hljs-dark');
+        
+        function setHighlightStyles() {
+            lightLink.disabled = isDark;
+            darkLink.disabled = !isDark;
+            reHighlight();
+        }
+
+        function setTheme(themeName) {
+            document.body.className = '';
+            document.body.classList.add(`theme-${themeName}`);
+            if (isDark) document.body.classList.add('dark');
+            
+            document.getElementById('theme-select').value = themeName;
+            currentTheme = themeName;
+            localStorage.setItem('theme_style', themeName);
+        }
+
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.classList.toggle('dark', isDark);
+            document.getElementById('theme-toggle').textContent = isDark ? 'Sun' : 'Moon';
+            localStorage.setItem('dark_mode', isDark ? 'dark' : 'light');
+            setHighlightStyles();
+        }
+        
+        // Aplikace témat při startu
+        setTheme(currentTheme);
+        document.getElementById('theme-toggle').textContent = isDark ? 'Sun' : 'Moon';
+        setHighlightStyles();
+        
+        // ===================================
         // === CORE LOGIKA DOKUMENTACE S KEŠOVÁNÍM ===
 
-        // Funkce pro generování kešovacího klíče
         function getCacheKey(path) {
             return `doc_cache_${OWNER}_${REPO}_${BRANCH}_${path}`;
         }
         
-        // Načte adresářovou strukturu (s kešováním pro rychlou inicializaci)
         async function fetchFiles(path = '') {
             try {
                 const url = ROOT_PATH ? `${API_BASE}/${ROOT_PATH}/${path}` : `${API_BASE}/${path}`;
@@ -125,9 +226,6 @@
 
         async function buildTree(path = '', depth = 0) {
             const items = await fetchFiles(path);
-            const nodes = [];
-            
-            // Optimalizace: Použití Promise.all pro paralelní načítání podadresářů (pokud je to možné)
             const promises = items.map(async item => {
                 if (item.type === 'dir') {
                     const children = await buildTree(item.path, depth + 1);
@@ -161,13 +259,12 @@
             document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
         }
 
-        // Načtení souboru (S KEŠOVÁNÍM)
         async function loadFile(path) {
             const content = document.getElementById('content');
             content.innerHTML = `<div class="loading"><div class="spinner"></div><p>Načítám...</p></div>`;
             
             const cacheKey = getCacheKey(path);
-            let md = sessionStorage.getItem(cacheKey); // 1. Zkusit načíst z keše
+            let md = sessionStorage.getItem(cacheKey); 
 
             if (!md) {
                 const cleanPath = path.startsWith('/') ? path.substring(1) : path;
@@ -181,7 +278,7 @@
                     }
                     
                     md = await res.text();
-                    sessionStorage.setItem(cacheKey, md); // 2. Uložit do keše
+                    sessionStorage.setItem(cacheKey, md); 
                 } catch (e) {
                     console.error(e);
                     content.innerHTML = `<div class="loading"><p>
@@ -193,11 +290,9 @@
                 }
             }
             
-            // Převod Markdownu na HTML a zobrazení
             const title = path.split('/').pop().replace('.md', '');
             
             if (typeof marked === 'undefined' || marked === null) {
-                // Toto by se nemělo stát, ale je to dobrý fallback
                 content.innerHTML = `<div class="loading"><p>Chyba: Knihovna Marked.js není načtena.</p></div>`;
                 return;
             }
@@ -210,43 +305,21 @@
             document.querySelector(`[data-path="${path}"]`)?.closest('.tree-item')?.classList.add('active');
         }
 
-        // Theme a Events (beze změny, funkční)
-
-        let isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.body.classList.toggle('dark', isDark);
-        document.getElementById('theme-toggle').textContent = isDark ? 'Sun' : 'Moon';
-        const lightLink = document.getElementById('hljs-light');
-        const darkLink = document.getElementById('hljs-dark');
-        
-        function setHighlightStyles() {
-            lightLink.disabled = isDark;
-            darkLink.disabled = !isDark;
-            reHighlight();
-        }
-        setHighlightStyles();
-
-        function toggleTheme() {
-            isDark = !isDark;
-            document.body.classList.toggle('dark', isDark);
-            document.getElementById('theme-toggle').textContent = isDark ? 'Sun' : 'Moon';
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            setHighlightStyles();
-        }
+        // ===================================
+        // === LISTENERY ===
 
         document.getElementById('theme-toggle').onclick = toggleTheme;
+        document.getElementById('theme-select').onchange = e => setTheme(e.target.value);
         
-        // --- OPTIMALIZACE: Vylepšené vyhledávání v názvu a cestě ---
         document.getElementById('search').oninput = e => {
             const term = e.target.value.toLowerCase();
             document.querySelectorAll('.name').forEach(el => {
                 const path = el.dataset.path?.toLowerCase() || '';
                 const name = el.textContent.toLowerCase();
 
-                // Zobrazit, pokud se termín shoduje s názvem NEBO s celou cestou
                 const show = term === '' || name.includes(term) || path.includes(term);
                 el.closest('.tree-item').style.display = show ? '' : 'none';
 
-                // Bonus: Rozbalit složky obsahující nalezený soubor
                 if (show) {
                     let parent = el.closest('.children');
                     while (parent) {
@@ -262,7 +335,6 @@
                 }
             });
         };
-        // -----------------------------------------------------------
         
         document.getElementById('menu-btn').onclick = () => document.body.classList.toggle('sidebar-open');
         document.getElementById('overlay').onclick = () => document.body.classList.remove('sidebar-open');
@@ -282,7 +354,7 @@
             }
         };
 
-        // Init (S KEŠOVÁNÍM STRUKTURY)
+        // Init
         async function init() {
             const treeCacheKey = `doc_tree_${OWNER}_${REPO}_${BRANCH}_${ROOT_PATH}`;
             const cachedTree = sessionStorage.getItem(treeCacheKey);
@@ -291,7 +363,7 @@
                 tree = JSON.parse(cachedTree);
             } else {
                 tree = await buildTree(ROOT_PATH);
-                sessionStorage.setItem(treeCacheKey, JSON.stringify(tree)); // Uložit novou strukturu
+                sessionStorage.setItem(treeCacheKey, JSON.stringify(tree)); 
             }
 
             const treeEl = document.getElementById('fileTree');
@@ -299,14 +371,15 @@
             
             const flatTree = tree.flatMap(n => n.type === 'file' ? [n] : n.children || []).filter(f => f.type === 'file');
             
+            // --- LOGIKA GARANCE INSTALACE ---
             const defaultFile = flatTree.find(f => f.path.toLowerCase().endsWith(DEFAULT_FILE.toLowerCase())) || flatTree[0];
+            // ---------------------------------
             
             if (defaultFile) {
                 loadFile(defaultFile.path);
             } else if (tree.length > 0) {
                  document.getElementById('content').innerHTML = `<div class="loading">
-                     <p>Repozitář obsahuje složky, ale v adresáři ${ROOT_PATH || '/'} nebyly nalezeny žádné .md soubory.</p>
-                     <p>Procházejte menu vlevo.</p>
+                     <p>Repozitář obsahuje složky. Soubor s instalací (${DEFAULT_FILE}) nebyl nalezen, proto procházejte menu vlevo.</p>
                  </div>`;
             } else {
                  document.getElementById('content').innerHTML = `<div class="loading">
