@@ -109,7 +109,7 @@
         <button id="menu-btn">Menu</button>
         <h1 id="site-title">{SITE_NAME}</h1>
         <div class="topbar-right">
-            <select id="theme-select">
+            <select id="theme-select" disabled>
                 <option value="Classic">Classic</option>
                 <option value="Modern">Modern</option>
                 <option value="Terminal">Terminal</option>
@@ -140,8 +140,10 @@
         const BRANCH = localStorage.getItem('BRANCH');
         const ROOT_PATH = localStorage.getItem('ROOT_PATH') || '';
         const SITE_NAME = localStorage.getItem('SITE_NAME');
+        const THEME_STYLE = localStorage.getItem('THEME_STYLE') || 'Classic'; // Nové
+        
         // --- GARANCE INSTALACE ---
-        const DEFAULT_FILE = 'INSTALL.md'; // Nový výchozí soubor
+        const DEFAULT_FILE = 'INSTALL.md'; // Výchozí soubor instalace
         // -------------------------
 
         if (!OWNER || !REPO || !BRANCH) {
@@ -154,7 +156,8 @@
 
         document.title = SITE_NAME;
         document.getElementById('site-title').textContent = SITE_NAME;
-
+        document.getElementById('theme-select').value = THEME_STYLE; // Nastaví vybrané téma
+        
         const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}/contents`;
         const RAW_BASE = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}`;
         let tree = [];
@@ -163,8 +166,7 @@
         // === LOGIKA TÉMAT A DARK MODE ===
         
         let isDark = localStorage.getItem('dark_mode') === 'dark' || (!localStorage.getItem('dark_mode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        let currentTheme = localStorage.getItem('theme_style') || 'Classic';
-
+        
         const lightLink = document.getElementById('hljs-light');
         const darkLink = document.getElementById('hljs-dark');
         
@@ -178,10 +180,6 @@
             document.body.className = '';
             document.body.classList.add(`theme-${themeName}`);
             if (isDark) document.body.classList.add('dark');
-            
-            document.getElementById('theme-select').value = themeName;
-            currentTheme = themeName;
-            localStorage.setItem('theme_style', themeName);
         }
 
         function toggleTheme() {
@@ -193,7 +191,7 @@
         }
         
         // Aplikace témat při startu
-        setTheme(currentTheme);
+        setTheme(THEME_STYLE); // Aplikuje styl načtený z localStorage
         document.getElementById('theme-toggle').textContent = isDark ? 'Sun' : 'Moon';
         setHighlightStyles();
         
@@ -201,10 +199,12 @@
         // === CORE LOGIKA DOKUMENTACE S KEŠOVÁNÍM ===
 
         function getCacheKey(path) {
+            // ... (logika getCacheKey beze změny) ...
             return `doc_cache_${OWNER}_${REPO}_${BRANCH}_${path}`;
         }
         
         async function fetchFiles(path = '') {
+            // ... (logika fetchFiles beze změny) ...
             try {
                 const url = ROOT_PATH ? `${API_BASE}/${ROOT_PATH}/${path}` : `${API_BASE}/${path}`;
                 const res = await fetch(`${url}?ref=${BRANCH}`);
@@ -225,6 +225,7 @@
         }
 
         async function buildTree(path = '', depth = 0) {
+            // ... (logika buildTree beze změny) ...
             const items = await fetchFiles(path);
             const promises = items.map(async item => {
                 if (item.type === 'dir') {
@@ -239,6 +240,7 @@
         }
 
         function renderTree(nodes, parent) {
+            // ... (logika renderTree beze změny) ...
             nodes.forEach(node => {
                 const li = document.createElement('li');
                 li.className = 'tree-item';
@@ -256,10 +258,12 @@
         }
 
         function reHighlight() {
+            // ... (logika reHighlight beze změny) ...
             document.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
         }
 
         async function loadFile(path) {
+            // ... (logika loadFile s kešováním beze změny) ...
             const content = document.getElementById('content');
             content.innerHTML = `<div class="loading"><div class="spinner"></div><p>Načítám...</p></div>`;
             
@@ -306,12 +310,13 @@
         }
 
         // ===================================
-        // === LISTENERY ===
+        // === LISTENERY (Téma je nyní jen toggle) ===
 
         document.getElementById('theme-toggle').onclick = toggleTheme;
-        document.getElementById('theme-select').onchange = e => setTheme(e.target.value);
+        // Odebrán listener pro theme-select, protože je disablovaný a mění se v setupu.
         
         document.getElementById('search').oninput = e => {
+            // ... (logika vyhledávání beze změny) ...
             const term = e.target.value.toLowerCase();
             document.querySelectorAll('.name').forEach(el => {
                 const path = el.dataset.path?.toLowerCase() || '';
@@ -372,14 +377,23 @@
             const flatTree = tree.flatMap(n => n.type === 'file' ? [n] : n.children || []).filter(f => f.type === 'file');
             
             // --- LOGIKA GARANCE INSTALACE ---
-            const defaultFile = flatTree.find(f => f.path.toLowerCase().endsWith(DEFAULT_FILE.toLowerCase())) || flatTree[0];
+            // 1. Zkusí najít INSTALL.md
+            let defaultFile = flatTree.find(f => f.path.toLowerCase().endsWith(DEFAULT_FILE.toLowerCase()));
+            // 2. Pokud INSTALL.md neexistuje, zkusí README.md
+            if (!defaultFile) {
+                defaultFile = flatTree.find(f => f.path.toLowerCase().endsWith('readme.md'));
+            }
+            // 3. Jinak vezme první soubor
+            if (!defaultFile) {
+                defaultFile = flatTree[0];
+            }
             // ---------------------------------
             
             if (defaultFile) {
                 loadFile(defaultFile.path);
             } else if (tree.length > 0) {
                  document.getElementById('content').innerHTML = `<div class="loading">
-                     <p>Repozitář obsahuje složky. Soubor s instalací (${DEFAULT_FILE}) nebyl nalezen, proto procházejte menu vlevo.</p>
+                     <p>Repozitář obsahuje složky. Nebyl nalezen žádný výchozí soubor (INSTALL.md / README.md). Procházejte menu vlevo.</p>
                  </div>`;
             } else {
                  document.getElementById('content').innerHTML = `<div class="loading">
